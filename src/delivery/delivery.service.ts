@@ -1,26 +1,110 @@
-import { Injectable } from '@nestjs/common';
-import { CreateDeliveryDto } from './dto/create-client.dto';
-import { UpdateDeliveryDto } from './dto/update-client.dto';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { CreateClientDto } from './dto/create-client.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Client } from './entities/client.entity';
+import { Repository } from 'typeorm';
+import { User } from 'src/users/entities/user.entity';
+import { PaginationDto } from '../common/dtos/pagination.dto';
 
 @Injectable()
 export class DeliveryService {
-  create(createDeliveryDto: CreateDeliveryDto) {
-    return 'This action adds a new delivery';
+  constructor(
+    @InjectRepository(Client)
+    private readonly clientRepository: Repository<Client>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
+  ) {}
+
+  async create(createClientDto: CreateClientDto, user: User) {
+    try {
+      const userFind = await this.usersRepository.findOne({
+        where: {
+          id: user.id,
+        },
+      });
+
+      if (!userFind) {
+        throw new NotFoundException(`User not found whit id: ${user.id}`);
+      }
+
+      const client = this.clientRepository.create({
+        batch_of_product: createClientDto.batch_of_product,
+        contact: createClientDto.contact,
+        dni_cuit: createClientDto.dni_cuit,
+        name_or_company: createClientDto.name_or_company,
+        observations: createClientDto.observations,
+        quantity: createClientDto.quantity,
+        user: userFind,
+      });
+
+      await this.clientRepository.save(client);
+
+      delete client.user.dni;
+      delete client.user.password;
+      delete client.user.role;
+      delete client.user.hash_refresh_token;
+
+      return client;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException(error.message);
+      }
+
+      console.log(error);
+      throw new InternalServerErrorException('Check log server');
+    }
   }
 
-  findAll() {
-    return `This action returns all delivery`;
+  findAll(paginationDto: PaginationDto) {
+    try {
+      const { limit, offset } = paginationDto;
+      const clients = this.clientRepository.find({
+        take: limit,
+        skip: offset,
+      });
+
+      const countClients = this.clientRepository
+        .createQueryBuilder()
+        .getCount();
+
+      const totalPages: number = Math.ceil(+countClients / limit);
+      const currentPage: number = Math.floor(offset / limit + 1);
+      const hasNextPage: boolean = currentPage < totalPages;
+
+      return {
+        totalPages,
+        currentPage,
+        hasNextPage,
+        clients,
+      };
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException('Check log server');
+    }
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} delivery`;
-  }
+    try {
+      const client = this.clientRepository.findOne({
+        where: { id },
+      });
 
-  update(id: number, updateDeliveryDto: UpdateDeliveryDto) {
-    return `This action updates a #${id} delivery`;
-  }
+      if (!client) {
+        throw new NotFoundException(`Client not found whit id: ${id}`);
+      }
 
-  remove(id: number) {
-    return `This action removes a #${id} delivery`;
+      return client;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException(error.message);
+      }
+
+      console.log(error);
+      throw new InternalServerErrorException('Check log server');
+    }
   }
 }

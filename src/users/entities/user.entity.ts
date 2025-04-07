@@ -1,4 +1,4 @@
-import { Client } from 'src/delivery/entities/client.entity';
+import { Client } from '../../delivery/entities/client.entity';
 import { ControlProduct } from '../../plant/entities/control_product.entity';
 import { ProductDispatch } from '../../plant/entities/product_dispatch.entity';
 import {

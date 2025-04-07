@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PlantModule } from './plant/plant.module';
 import { DeliveryModule } from './delivery/delivery.module';
+import { ExcelModule } from './excel/excel.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { DeliveryModule } from './delivery/delivery.module';
     UsersModule,
     PlantModule,
     DeliveryModule,
+    ExcelModule,
   ],
   controllers: [],
   providers: [],

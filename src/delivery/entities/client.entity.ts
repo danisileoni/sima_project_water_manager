@@ -1,4 +1,4 @@
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../../users/entities/user.entity';
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
@@ -24,10 +24,10 @@ export class Client {
   @Column('text')
   observations: string;
 
-  @Column('numeric', {
+  @Column('text', {
     nullable: false,
   })
-  dni_cuit: number;
+  dni_cuit: string;
 
   @Column('text', {
     nullable: false,
