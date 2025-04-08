@@ -1,17 +1,14 @@
-import { IsDate, IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsString } from 'class-validator';
 
 export class ControlProductExcelDto {
   @IsString()
   batch_num: string;
 
   @IsString()
-  dni_cuit: string;
-
-  @IsString()
   responsible: string;
 
-  @IsDate()
-  production_date: Date;
+  @IsString()
+  production_date: string;
 
   @IsString()
   observations: string;

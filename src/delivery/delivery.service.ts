@@ -6,7 +6,7 @@ import {
 import { CreateClientDto } from './dto/create-client.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Client } from './entities/client.entity';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { User } from 'src/users/entities/user.entity';
 import { PaginationDto } from '../common/dtos/pagination.dto';
 
@@ -17,9 +17,14 @@ export class DeliveryService {
     private readonly clientRepository: Repository<Client>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(createClientDto: CreateClientDto, user: User) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
       const userFind = await this.usersRepository.findOne({
         where: {
@@ -50,12 +55,15 @@ export class DeliveryService {
 
       return client;
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       if (error instanceof NotFoundException) {
         throw new NotFoundException(error.message);
       }
 
       console.log(error);
       throw new InternalServerErrorException('Check log server');
+    } finally {
+      await queryRunner.release();
     }
   }
 

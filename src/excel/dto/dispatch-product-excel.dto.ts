@@ -1,11 +1,11 @@
-import { IsDate, IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsString } from 'class-validator';
 
 export class DispatchProductExcelDto {
   @IsString()
   batch_num: string;
 
-  @IsDate()
-  date: Date;
+  @IsString()
+  date: string;
 
   @IsString()
   responsible: string;

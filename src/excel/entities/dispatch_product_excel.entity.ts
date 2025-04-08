@@ -6,7 +6,7 @@ export class DispatchProductExcel {
   id: number;
 
   @Column('text', { nullable: false })
-  name: string;
+  file_name: string;
 
   @Column('text', { nullable: false })
   path: string;

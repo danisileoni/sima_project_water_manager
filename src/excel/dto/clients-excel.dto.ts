@@ -1,4 +1,4 @@
-import { IsDate, IsString } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class ClientExcelDto {
   @IsString()
@@ -10,8 +10,8 @@ export class ClientExcelDto {
   @IsString()
   batch_of_product: string;
 
-  @IsDate()
-  date: Date;
+  @IsString()
+  date: string;
 
   @IsString()
   contact: string;

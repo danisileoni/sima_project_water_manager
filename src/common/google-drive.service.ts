@@ -8,7 +8,7 @@ export class GoogleDriveService {
 
   constructor() {
     const auth = new google.auth.GoogleAuth({
-      keyFile: 'src/config/google-service.json', // Ruta a tu clave JSON
+      keyFile: 'src/config/google-service.json',
       scopes: ['https://www.googleapis.com/auth/drive'],
     });
 
