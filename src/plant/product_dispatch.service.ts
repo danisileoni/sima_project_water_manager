@@ -14,6 +14,11 @@ import { TypePackaging } from './entities/type_packaging.entity';
 import { isValidDateYYYY } from 'src/common/helpers/is_valid_date_yyyy.helper';
 import { isValidDateYY } from 'src/common/helpers/is_valid_date_yy.helper';
 import { User } from 'src/users/entities/user.entity';
+import { ExcelService } from 'src/excel/excel.service';
+import { GoogleDriveService } from 'src/common/google-drive.service';
+import { DispatchProductExcel } from 'src/excel/entities/dispatch_product_excel.entity';
+import { TemplatesExcel } from 'src/excel/types/templates_excel';
+import * as path from 'path';
 
 @Injectable()
 export class ProductDispatchService {
@@ -26,6 +31,10 @@ export class ProductDispatchService {
     private readonly vehicleTransferRepository: Repository<VehicleTransfer>,
     @InjectRepository(TypePackaging)
     private readonly typePackagingRepository: Repository<TypePackaging>,
+    @InjectRepository(DispatchProductExcel)
+    private readonly dispatchProductExcelRepository: Repository<DispatchProductExcel>,
+    private readonly excelService: ExcelService,
+    private readonly googleDriveService: GoogleDriveService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -86,6 +95,130 @@ export class ProductDispatchService {
       });
 
       await queryRunner.manager.save(newProductDispatch);
+
+      const lastDispatchProductExcel = await this.dispatchProductExcelRepository.findOne({
+        order: { created_at: 'DESC' },
+        where: {},
+      });
+
+      const now = new Date();
+      let isNotSameMonth = true;
+
+      if (lastDispatchProductExcel) {
+        const lastDate = new Date(lastDispatchProductExcel.created_at);
+        isNotSameMonth =
+          now.getMonth() !== lastDate.getMonth() ||
+          now.getFullYear() !== lastDate.getFullYear();
+      }
+
+      const day = now.getDate();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const newSheetName = `${day}-${month}-${year}`;
+
+      let fileId = lastDispatchProductExcel?.file_id || '';
+      let fileName = lastDispatchProductExcel?.file_name || '';
+
+      // Siempre crear un nuevo archivo Excel o descargar el existente
+      if (!lastDispatchProductExcel || isNotSameMonth) {
+        // Crear un nuevo archivo Excel desde la plantilla
+        fileName = await this.excelService.createNewFileExcel(
+          TemplatesExcel.MontatyDispatchProduct,
+        );
+        console.log('📄 Nuevo archivo creado:', fileName);
+        fileId = await this.googleDriveService.uploadFile(
+          path.join(process.cwd(), 'dist', 'excel', 'tempfiles', fileName),
+          'application/octet-stream',
+          '1EWPLz4rpN8gZ5H46_C41lskZ0wEA6azK'
+        );
+        console.log('📄 Archivo subido a Google Drive, fileId:', fileId);
+      } else {
+        // Descargar el archivo existente de Google Drive
+        console.log('📄 Descargando archivo existente de Google Drive');
+        try {
+          await this.googleDriveService.downloadFile(
+            lastDispatchProductExcel.file_id,
+            path.join(process.cwd(), 'dist', 'excel', 'tempfiles'),
+            lastDispatchProductExcel.file_name,
+          );
+          fileName = lastDispatchProductExcel.file_name;
+          console.log('📄 Archivo descargado correctamente:', fileName);
+        } catch (downloadError) {
+          console.error('❌ Error al descargar archivo de Google Drive:', downloadError);
+          // Si falla la descarga, crear un nuevo archivo
+          console.log('⚠️ Creando nuevo archivo debido a error de descarga');
+          fileName = await this.excelService.createNewFileExcel(
+            TemplatesExcel.MontatyDispatchProduct,
+          );
+          console.log('📄 Nuevo archivo creado:', fileName);
+        }
+      }
+
+      console.log('📄 newSheetName', newSheetName);
+
+      // Asegurarse de que estamos trabajando con el archivo correcto
+      await this.excelService.addContentRawDispatchProduct(
+        {
+          batch_num: createProductDispatchDto.batch_num,
+          date: createProductDispatchDto.date,
+          observations: createProductDispatchDto.observations,
+          quantity: createProductDispatchDto.quantity,
+          num_domain: createProductDispatchDto.num_domain,
+          vehicle: createProductDispatchDto.vehicle,
+          packaging: typePackaging.packaging,
+          responsible: createProductDispatchDto.responsible,
+        },
+        fileName,
+      );
+
+      console.log('📄 Added content to file');
+
+      if (lastDispatchProductExcel) {
+        await this.dispatchProductExcelRepository.save(lastDispatchProductExcel);
+      } else {
+        const newDispatchProductExcel = this.dispatchProductExcelRepository.create({
+          file_id: fileId,
+          date: now,
+          file_name: fileName,
+          path: './dispatch_products',
+        });
+        await this.dispatchProductExcelRepository.save(newDispatchProductExcel);
+      }
+
+      console.log('📄 Saving dispatch product to database');
+      
+      // Verificar que el archivo existe en Google Drive antes de reemplazarlo
+      const fileExistsInDrive = await this.googleDriveService.fileExists(fileId);
+      
+      if (fileExistsInDrive) {
+        // Reemplazar el archivo existente
+        await this.googleDriveService.replaceFile(
+          fileId,
+          path.join(process.cwd(), 'dist', 'excel', 'tempfiles', fileName),
+          'application/octet-stream',
+        );
+      } else {
+        // Si el archivo no existe, subirlo como nuevo
+        console.log('⚠️ El archivo no existe en Google Drive, subiendo como nuevo...');
+        fileId = await this.googleDriveService.uploadFile(
+          path.join(process.cwd(), 'dist', 'excel', 'tempfiles', fileName),
+          'application/octet-stream',
+          '1DmbPy4VJM9Bmr4sP38ZGjbU4qxfxau06'
+        );
+        console.log('📄 Nuevo fileId', fileId);
+        
+        // Actualizar el ID del archivo en la base de datos
+        if (lastDispatchProductExcel) {
+          lastDispatchProductExcel.file_id = fileId;
+          await this.dispatchProductExcelRepository.save(lastDispatchProductExcel);
+        }
+      }
+      
+      // Limpiar archivos temporales después de subir a Google Drive
+      // Mantener solo el archivo más reciente para futuras operaciones
+      await this.excelService.clearTempFiles();
+      console.log('🧹 Archivos temporales limpiados');
+
       await queryRunner.commitTransaction();
 
       return newProductDispatch;

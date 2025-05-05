@@ -16,7 +16,7 @@ export class CreateClientDto {
   @MaxLength(255)
   observations: string;
 
-  @IsNumber()
+  @IsString()
   dni_cuit: string;
 
   @IsString()

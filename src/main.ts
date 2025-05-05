@@ -43,6 +43,6 @@ async function bootstrap() {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  await app.listen(envs.port);
+  await app.listen(envs.port || 3000);
 }
 bootstrap();

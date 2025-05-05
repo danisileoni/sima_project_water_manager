@@ -3,6 +3,16 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "excel/templates/**/*",
+        "outDir": "dist"
+      },
+      {
+        "include": "config/google-service.json",
+        "outDir": "dist"
+      }
+    ]
   }
 }

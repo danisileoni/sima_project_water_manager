@@ -18,4 +18,7 @@ export class ClientExcelDto {
 
   @IsString()
   observations: string;
+
+  @IsString()
+  quantity: number;
 }

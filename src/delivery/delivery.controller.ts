@@ -22,6 +22,18 @@ export class DeliveryController {
     return this.deliveryService.findAll(paginationDto);
   }
 
+  @Get('drive/files')
+  @Auth(ValidRoles.admin)
+  listDriveFiles() {
+    return this.deliveryService.listDriveFiles();
+  }
+
+  @Get('drive/check/:fileId')
+  @Auth(ValidRoles.admin)
+  checkDriveFile(@Param('fileId') fileId: string) {
+    return this.deliveryService.checkDriveFile(fileId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.deliveryService.findOne(+id);
