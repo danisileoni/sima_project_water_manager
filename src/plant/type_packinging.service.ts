@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { FilterDto } from 'src/common/dtos/filter.dto';
 import { TypePackaging } from './entities/type_packaging.entity';
 import { CreateTypePackagingDto } from './dto/create_type_packaging';
 
@@ -33,9 +33,9 @@ export class TypePackagingService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto) {
+  async findAll(filterDto: FilterDto) {
     try {
-      const { limit, offset } = paginationDto;
+      const { limit, offset } = filterDto;
 
       const typePackaging = await this.typePackagingRepository.find({
         take: limit,

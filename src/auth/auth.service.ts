@@ -304,6 +304,8 @@ export class AuthService {
         sameSite: 'lax',
         secure: true,
       });
+
+    console.log('holi');
     return res.status(200).send({ user });
   }
 

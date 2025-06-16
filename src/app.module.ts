@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { PlantModule } from './plant/plant.module';
 import { DeliveryModule } from './delivery/delivery.module';
 import { ExcelModule } from './excel/excel.module';
+import { PerformanceModule } from './performance/performance.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ExcelModule } from './excel/excel.module';
     PlantModule,
     DeliveryModule,
     ExcelModule,
+    PerformanceModule,
   ],
   controllers: [],
   providers: [],

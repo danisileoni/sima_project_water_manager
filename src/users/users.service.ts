@@ -63,7 +63,6 @@ export class UsersService {
       throw new NotFoundException(`User not found whit id: ${id}`);
     }
 
-    delete user.role;
     delete user.is_active;
     delete user.created_at;
     delete user.hash_refresh_token;

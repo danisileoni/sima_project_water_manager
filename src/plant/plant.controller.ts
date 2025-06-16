@@ -8,7 +8,7 @@ import {
   Query,
   ParseIntPipe,
 } from '@nestjs/common';
-import { PaginationDto } from '../common/dtos/pagination.dto';
+import { FilterDto } from '../common/dtos/filter.dto';
 import { TypePackagingService } from './type_packinging.service';
 import { CreateTypePackagingDto } from './dto/create_type_packaging';
 import { CreateProductDispatchDto } from './dto/create_product_dispatch.dto';
@@ -36,8 +36,8 @@ export class PlantController {
   }
 
   @Get('type-packaging')
-  findAllTypePackaging(@Query() paginationDto: PaginationDto) {
-    return this.typePackagingService.findAll(paginationDto);
+  findAllTypePackaging(@Query() filterDto: FilterDto) {
+    return this.typePackagingService.findAll(filterDto);
   }
 
   @Get('type-packaging/:id')
@@ -56,17 +56,27 @@ export class PlantController {
   @Auth(ValidRoles.plant, ValidRoles.admin)
   createProductDispatch(
     @Body() createProductDispatchDto: CreateProductDispatchDto,
+    @GetUser() user: User,
   ) {
-    return this.productDispatchService.create(createProductDispatchDto);
+    return this.productDispatchService.create(
+      createProductDispatchDto,
+      user.id,
+    );
   }
 
   @Get('product-dispatch')
   @Auth(ValidRoles.plant, ValidRoles.admin)
-  findAllProductDispatch(@Query() paginationDto: PaginationDto) {
-    return this.productDispatchService.findAll(paginationDto);
+  findAllProductDispatch(@Query() filterDto: FilterDto) {
+    return this.productDispatchService.findAll(filterDto);
   }
 
-  @Get('product-dispatch/:id')
+  @Get('product-dispatch/for-user')
+  @Auth(ValidRoles.delivery, ValidRoles.admin)
+  findDispatchForUser(@Query() filterDto: FilterDto, @GetUser() user: User) {
+    return this.productDispatchService.findDispatchForUser(filterDto, user.id);
+  }
+
+  @Get('product-dispatch/findOne/:id')
   @Auth(ValidRoles.plant, ValidRoles.admin)
   findOneProductDispatch(@Param('id', ParseIntPipe) id: number) {
     return this.productDispatchService.findOne(id);
@@ -90,8 +100,8 @@ export class PlantController {
 
   @Get('control-product')
   @Auth(ValidRoles.plant, ValidRoles.admin)
-  findAllControlProduct(@Query() paginationDto: PaginationDto) {
-    return this.controlProductService.findAll(paginationDto);
+  findAllControlProduct(@Query() filterDto: FilterDto) {
+    return this.controlProductService.findAll(filterDto);
   }
 
   @Get('control-product/:id')

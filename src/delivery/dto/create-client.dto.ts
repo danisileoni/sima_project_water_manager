@@ -1,4 +1,27 @@
-import { IsNumber, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsNumber,
+  IsPositive,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class ProductDto {
+  @IsNumber()
+  @IsPositive()
+  quantity: number;
+
+  @IsNumber()
+  product_id: number;
+
+  @IsString()
+  @MaxLength(8)
+  @MinLength(8)
+  batch_of_product: string;
+}
 
 export class CreateClientDto {
   @IsString()
@@ -9,9 +32,6 @@ export class CreateClientDto {
   @MaxLength(255)
   contact: string;
 
-  @IsNumber()
-  quantity: number;
-
   @IsString()
   @MaxLength(255)
   observations: string;
@@ -19,8 +39,8 @@ export class CreateClientDto {
   @IsString()
   dni_cuit: string;
 
-  @IsString()
-  @MaxLength(8)
-  @MinLength(8)
-  batch_of_product: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductDto)
+  products: ProductDto[];
 }

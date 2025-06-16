@@ -1,4 +1,10 @@
-import { IsNumber, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsNumber,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateProductDispatchDto {
   @IsString()
@@ -26,4 +32,8 @@ export class CreateProductDispatchDto {
 
   @IsString()
   vehicle: string;
+
+  @IsString()
+  @IsUUID()
+  user_dispatch_id: string;
 }

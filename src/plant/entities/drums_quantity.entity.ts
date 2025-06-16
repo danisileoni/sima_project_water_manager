@@ -6,10 +6,22 @@ export class DrumsQuantity {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column('numeric', { nullable: false })
+  @Column('numeric', {
+    nullable: false,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => Number(value),
+    },
+  })
   quantity_enter: number;
 
-  @Column('numeric', { nullable: false })
+  @Column('numeric', {
+    nullable: false,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => Number(value),
+    },
+  })
   quantity_out: number;
 
   @OneToOne(

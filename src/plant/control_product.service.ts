@@ -8,7 +8,7 @@ import { DataSource, Repository } from 'typeorm';
 import { ControlProduct } from './entities/control_product.entity';
 import { ControlProductDto } from './dto/control_product.dto';
 import { DrumsQuantity } from './entities/drums_quantity.entity';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { FilterDto } from 'src/common/dtos/filter.dto';
 import { isValidDateYYYY } from 'src/common/helpers/is_valid_date_yyyy.helper';
 import { User } from 'src/users/entities/user.entity';
 import { ExcelService } from 'src/excel/excel.service';
@@ -63,10 +63,11 @@ export class ControlProductService {
       });
       await queryRunner.manager.save(controlProduct);
 
-      const lastControlProductExcel = await this.controlProductExcelRepository.findOne({
-        order: { created_at: 'DESC' },
-        where: {},
-      });
+      const lastControlProductExcel =
+        await this.controlProductExcelRepository.findOne({
+          order: { created_at: 'DESC' },
+          where: {},
+        });
 
       const now = new Date();
       let isNotSameMonth = true;
@@ -96,7 +97,7 @@ export class ControlProductService {
         fileId = await this.googleDriveService.uploadFile(
           path.join(process.cwd(), 'dist', 'excel', 'tempfiles', fileName),
           'application/octet-stream',
-          '13iIqqjziao1qAX-_Fj8HE5QKoQ7NFwtW'
+          '13iIqqjziao1qAX-_Fj8HE5QKoQ7NFwtW',
         );
         console.log('📄 Archivo subido a Google Drive, fileId:', fileId);
       } else {
@@ -111,7 +112,10 @@ export class ControlProductService {
           fileName = lastControlProductExcel.file_name;
           console.log('📄 Archivo descargado correctamente:', fileName);
         } catch (downloadError) {
-          console.error('❌ Error al descargar archivo de Google Drive:', downloadError);
+          console.error(
+            '❌ Error al descargar archivo de Google Drive:',
+            downloadError,
+          );
           // Si falla la descarga, crear un nuevo archivo
           console.log('⚠️ Creando nuevo archivo debido a error de descarga');
           fileName = await this.excelService.createNewFileExcel(
@@ -141,20 +145,22 @@ export class ControlProductService {
       if (lastControlProductExcel) {
         await this.controlProductExcelRepository.save(lastControlProductExcel);
       } else {
-        const newControlProductExcel = this.controlProductExcelRepository.create({
-          file_id: fileId,
-          date: now,
-          file_name: fileName,
-          path: './control_products',
-        });
+        const newControlProductExcel =
+          this.controlProductExcelRepository.create({
+            file_id: fileId,
+            date: now,
+            file_name: fileName,
+            path: './control_products',
+          });
         await this.controlProductExcelRepository.save(newControlProductExcel);
       }
 
       console.log('📄 Saving control product to database');
-      
+
       // Verificar que el archivo existe en Google Drive antes de reemplazarlo
-      const fileExistsInDrive = await this.googleDriveService.fileExists(fileId);
-      
+      const fileExistsInDrive =
+        await this.googleDriveService.fileExists(fileId);
+
       if (fileExistsInDrive) {
         // Reemplazar el archivo existente
         await this.googleDriveService.replaceFile(
@@ -164,21 +170,25 @@ export class ControlProductService {
         );
       } else {
         // Si el archivo no existe, subirlo como nuevo
-        console.log('⚠️ El archivo no existe en Google Drive, subiendo como nuevo...');
+        console.log(
+          '⚠️ El archivo no existe en Google Drive, subiendo como nuevo...',
+        );
         fileId = await this.googleDriveService.uploadFile(
           path.join(process.cwd(), 'dist', 'excel', 'tempfiles', fileName),
           'application/octet-stream',
-          '1DmbPy4VJM9Bmr4sP38ZGjbU4qxfxau06'
+          '1DmbPy4VJM9Bmr4sP38ZGjbU4qxfxau06',
         );
         console.log('📄 Nuevo fileId', fileId);
-        
+
         // Actualizar el ID del archivo en la base de datos
         if (lastControlProductExcel) {
           lastControlProductExcel.file_id = fileId;
-          await this.controlProductExcelRepository.save(lastControlProductExcel);
+          await this.controlProductExcelRepository.save(
+            lastControlProductExcel,
+          );
         }
       }
-      
+
       // Limpiar archivos temporales después de subir a Google Drive
       // Mantener solo el archivo más reciente para futuras operaciones
       await this.excelService.clearTempFiles();
@@ -206,9 +216,9 @@ export class ControlProductService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto) {
+  async findAll(filterDto: FilterDto) {
     try {
-      const { limit, offset } = paginationDto;
+      const { limit, offset } = filterDto;
 
       const controlProduct = await this.controlProductRepository.find({
         take: limit,

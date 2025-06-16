@@ -43,16 +43,16 @@ export class User {
   })
   password: string;
 
-  @Column('date', {
-    nullable: false,
-    default: new Date().toISOString(),
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
   })
   created_at: Date;
 
-  @Column('date', {
-    nullable: false,
-    default: new Date().toISOString(),
-    onUpdate: new Date().toISOString(),
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
   })
   updated_at: Date;
 

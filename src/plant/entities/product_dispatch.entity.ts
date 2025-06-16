@@ -27,6 +27,10 @@ export class ProductDispatch {
 
   @Column('numeric', {
     nullable: false,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: string) => Number(value),
+    },
   })
   quantity: number;
 
@@ -46,16 +50,16 @@ export class ProductDispatch {
   })
   is_active: boolean;
 
-  @Column('date', {
-    nullable: false,
-    default: new Date().toISOString(),
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
   })
   created_at: Date;
 
-  @Column('date', {
-    nullable: false,
-    default: new Date().toISOString(),
-    onUpdate: new Date().toISOString(),
+  @Column({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP',
   })
   updated_at: Date;
 
@@ -78,4 +82,11 @@ export class ProductDispatch {
   @ManyToOne(() => User, (user) => user.product_dispatch)
   @JoinColumn({ name: 'user_id' })
   user: User;
+
+  @Column({ name: 'user_dispatch_id', nullable: true })
+  user_dispatch_id: string;
+
+  @ManyToOne(() => User, (user) => user.control_product)
+  @JoinColumn({ name: 'user_dispatch_id' })
+  user_dispatch: User;
 }

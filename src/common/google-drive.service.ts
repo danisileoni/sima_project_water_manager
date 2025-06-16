@@ -37,13 +37,17 @@ export class GoogleDriveService implements OnModuleInit {
         console.log('⚠️ No se proporcionó un ID de archivo válido');
         return false;
       }
-      
-      console.log(`🔍 Verificando si existe el archivo en Google Drive (ID: ${fileId})`);
+
+      console.log(
+        `🔍 Verificando si existe el archivo en Google Drive (ID: ${fileId})`,
+      );
       const response = await this.drive.files.get({
         fileId,
         fields: 'id,name',
       });
-      console.log(`✅ Archivo encontrado: ${response.data.name} (ID: ${response.data.id})`);
+      console.log(
+        `✅ Archivo encontrado: ${response.data.name} (ID: ${response.data.id})`,
+      );
       return true;
     } catch (error) {
       if (error.code === 404) {
@@ -61,21 +65,56 @@ export class GoogleDriveService implements OnModuleInit {
       console.log(`📋 Listando archivos en Google Drive (max: ${pageSize})`);
       const response = await this.drive.files.list({
         pageSize,
-        fields: 'files(id, name, mimeType, createdTime, modifiedTime, size)',
+        fields:
+          'files(id, name, mimeType, createdTime, modifiedTime, size, parents)',
       });
 
       const files = response.data.files || [];
       console.log(`✅ Se encontraron ${files.length} archivos en Google Drive`);
-      
+
       // Imprimir información de los archivos
       files.forEach((file, index) => {
-        console.log(`📄 ${index + 1}. ${file.name} (ID: ${file.id}, Tipo: ${file.mimeType})`);
+        console.log(
+          `📄 ${index + 1}. ${file.name} (ID: ${file.id}, Tipo: ${file.mimeType})`,
+        );
       });
-      
+
       return files;
     } catch (error) {
       console.error('❌ Error al listar archivos en Google Drive:', error);
       return [];
+    }
+  }
+
+  // Buscar archivo por nombre y carpeta en Google Drive
+  async findFileByName(
+    fileName: string,
+    folderId?: string,
+  ): Promise<any | null> {
+    try {
+      let q = `name = '${fileName.replace(/'/g, "\\'")}' and trashed = false`;
+      if (folderId) {
+        q += ` and '${folderId}' in parents`;
+      }
+      const response = await this.drive.files.list({
+        q,
+        fields: 'files(id, name, parents)',
+        pageSize: 1,
+      });
+      const files = response.data.files || [];
+      if (files.length > 0) {
+        console.log(
+          `✅ Archivo encontrado por nombre: ${files[0].name} (ID: ${files[0].id})`,
+        );
+        return files[0];
+      }
+      return null;
+    } catch (error) {
+      console.error(
+        '❌ Error al buscar archivo por nombre en Google Drive:',
+        error,
+      );
+      return null;
     }
   }
 
@@ -107,7 +146,9 @@ export class GoogleDriveService implements OnModuleInit {
         },
       );
 
-      console.log(`✅ Archivo subido exitosamente: ${response.data.name} (ID: ${response.data.id})`);
+      console.log(
+        `✅ Archivo subido exitosamente: ${response.data.name} (ID: ${response.data.id})`,
+      );
       return response.data.id;
     } catch (error) {
       console.error('❌ Error al subir archivo a Google Drive:', error);
@@ -115,7 +156,11 @@ export class GoogleDriveService implements OnModuleInit {
     }
   }
 
-  async downloadFile(fileId: string, destinationPath: string, fileName?: string) {
+  async downloadFile(
+    fileId: string,
+    destinationPath: string,
+    fileName?: string,
+  ) {
     try {
       // Primero, obtener información del archivo para saber su nombre si no se proporciona
       let actualFileName = fileName;
@@ -128,13 +173,16 @@ export class GoogleDriveService implements OnModuleInit {
       }
 
       // Verificar si destinationPath es un directorio
-      const stats = fs.existsSync(destinationPath) ? fs.statSync(destinationPath) : null;
-      
+      const stats = fs.existsSync(destinationPath)
+        ? fs.statSync(destinationPath)
+        : null;
+
       // Si es un directorio, añadir el nombre del archivo
-      const finalPath = stats && stats.isDirectory() 
-        ? path.join(destinationPath, actualFileName)
-        : destinationPath;
-      
+      const finalPath =
+        stats && stats.isDirectory()
+          ? path.join(destinationPath, actualFileName)
+          : destinationPath;
+
       // Asegurarse de que el directorio existe
       const dir = path.dirname(finalPath);
       if (!fs.existsSync(dir)) {
@@ -142,7 +190,7 @@ export class GoogleDriveService implements OnModuleInit {
       }
 
       console.log(`📥 Descargando archivo a: ${finalPath}`);
-      
+
       const response = await this.drive.files.get(
         { fileId, alt: 'media' },
         { responseType: 'stream' },
@@ -189,7 +237,9 @@ export class GoogleDriveService implements OnModuleInit {
 
       // Obtener el nombre del archivo del path
       const fileName = path.basename(filePath);
-      console.log(`🔄 Reemplazando archivo en Google Drive: ${fileName} (ID: ${fileId})`);
+      console.log(
+        `🔄 Reemplazando archivo en Google Drive: ${fileName} (ID: ${fileId})`,
+      );
 
       const media = { mimeType, body: fs.createReadStream(filePath) };
 
@@ -203,7 +253,9 @@ export class GoogleDriveService implements OnModuleInit {
         fields: 'id,name',
       });
 
-      console.log(`✅ Archivo reemplazado exitosamente: ${response.data.name} (ID: ${response.data.id})`);
+      console.log(
+        `✅ Archivo reemplazado exitosamente: ${response.data.name} (ID: ${response.data.id})`,
+      );
       return {
         fileId: response.data.id,
         fileName: response.data.name,

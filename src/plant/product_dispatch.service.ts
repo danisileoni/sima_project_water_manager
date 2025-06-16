@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { FilterDto } from 'src/common/dtos/filter.dto';
 import { CreateProductDispatchDto } from './dto/create_product_dispatch.dto';
 import { ProductDispatch } from './entities/product_dispatch.entity';
 import { VehicleTransfer } from './entities/vehicle_transfer.entity';
@@ -38,14 +38,29 @@ export class ProductDispatchService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async create(createProductDispatchDto: CreateProductDispatchDto) {
+  async create(
+    createProductDispatchDto: CreateProductDispatchDto,
+    userId: string,
+  ) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
-    const { type_packaging_id } = createProductDispatchDto;
+    const { type_packaging_id, user_dispatch_id } = createProductDispatchDto;
     try {
       const user = await this.usersRepository.findOneBy({
+        id: userId,
+        is_active: true,
+      });
+
+      if (!user) {
+        throw new InternalServerErrorException(
+          'User not found, contact your administrator',
+        );
+      }
+
+      const userDispatch = await this.usersRepository.findOneBy({
+        id: user_dispatch_id,
         is_active: true,
       });
 
@@ -92,14 +107,18 @@ export class ProductDispatchService {
         date: validDate.date,
         vehicle_transfer: newVehicleTransfer,
         type_packaging: typePackaging,
+        user,
+        user_dispatch: userDispatch,
+        user_dispatch_id: user_dispatch_id,
       });
 
       await queryRunner.manager.save(newProductDispatch);
 
-      const lastDispatchProductExcel = await this.dispatchProductExcelRepository.findOne({
-        order: { created_at: 'DESC' },
-        where: {},
-      });
+      const lastDispatchProductExcel =
+        await this.dispatchProductExcelRepository.findOne({
+          order: { created_at: 'DESC' },
+          where: {},
+        });
 
       const now = new Date();
       let isNotSameMonth = true;
@@ -129,7 +148,7 @@ export class ProductDispatchService {
         fileId = await this.googleDriveService.uploadFile(
           path.join(process.cwd(), 'dist', 'excel', 'tempfiles', fileName),
           'application/octet-stream',
-          '1EWPLz4rpN8gZ5H46_C41lskZ0wEA6azK'
+          '1EWPLz4rpN8gZ5H46_C41lskZ0wEA6azK',
         );
         console.log('📄 Archivo subido a Google Drive, fileId:', fileId);
       } else {
@@ -144,7 +163,10 @@ export class ProductDispatchService {
           fileName = lastDispatchProductExcel.file_name;
           console.log('📄 Archivo descargado correctamente:', fileName);
         } catch (downloadError) {
-          console.error('❌ Error al descargar archivo de Google Drive:', downloadError);
+          console.error(
+            '❌ Error al descargar archivo de Google Drive:',
+            downloadError,
+          );
           // Si falla la descarga, crear un nuevo archivo
           console.log('⚠️ Creando nuevo archivo debido a error de descarga');
           fileName = await this.excelService.createNewFileExcel(
@@ -174,22 +196,26 @@ export class ProductDispatchService {
       console.log('📄 Added content to file');
 
       if (lastDispatchProductExcel) {
-        await this.dispatchProductExcelRepository.save(lastDispatchProductExcel);
+        await this.dispatchProductExcelRepository.save(
+          lastDispatchProductExcel,
+        );
       } else {
-        const newDispatchProductExcel = this.dispatchProductExcelRepository.create({
-          file_id: fileId,
-          date: now,
-          file_name: fileName,
-          path: './dispatch_products',
-        });
+        const newDispatchProductExcel =
+          this.dispatchProductExcelRepository.create({
+            file_id: fileId,
+            date: now,
+            file_name: fileName,
+            path: './dispatch_products',
+          });
         await this.dispatchProductExcelRepository.save(newDispatchProductExcel);
       }
 
       console.log('📄 Saving dispatch product to database');
-      
+
       // Verificar que el archivo existe en Google Drive antes de reemplazarlo
-      const fileExistsInDrive = await this.googleDriveService.fileExists(fileId);
-      
+      const fileExistsInDrive =
+        await this.googleDriveService.fileExists(fileId);
+
       if (fileExistsInDrive) {
         // Reemplazar el archivo existente
         await this.googleDriveService.replaceFile(
@@ -199,21 +225,25 @@ export class ProductDispatchService {
         );
       } else {
         // Si el archivo no existe, subirlo como nuevo
-        console.log('⚠️ El archivo no existe en Google Drive, subiendo como nuevo...');
+        console.log(
+          '⚠️ El archivo no existe en Google Drive, subiendo como nuevo...',
+        );
         fileId = await this.googleDriveService.uploadFile(
           path.join(process.cwd(), 'dist', 'excel', 'tempfiles', fileName),
           'application/octet-stream',
-          '1DmbPy4VJM9Bmr4sP38ZGjbU4qxfxau06'
+          '1DmbPy4VJM9Bmr4sP38ZGjbU4qxfxau06',
         );
         console.log('📄 Nuevo fileId', fileId);
-        
+
         // Actualizar el ID del archivo en la base de datos
         if (lastDispatchProductExcel) {
           lastDispatchProductExcel.file_id = fileId;
-          await this.dispatchProductExcelRepository.save(lastDispatchProductExcel);
+          await this.dispatchProductExcelRepository.save(
+            lastDispatchProductExcel,
+          );
         }
       }
-      
+
       // Limpiar archivos temporales después de subir a Google Drive
       // Mantener solo el archivo más reciente para futuras operaciones
       await this.excelService.clearTempFiles();
@@ -240,9 +270,9 @@ export class ProductDispatchService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto) {
+  async findAll(filterDto: FilterDto) {
     try {
-      const { limit, offset } = paginationDto;
+      const { limit, offset } = filterDto;
 
       const productsDispatch = await this.productDispatchRepository.find({
         take: limit,
@@ -273,6 +303,111 @@ export class ProductDispatchService {
         throw new NotFoundException(error.message);
       }
 
+      console.log(error);
+      throw new InternalServerErrorException('Check log server');
+    }
+  }
+
+  async findDispatchForUser(filterDto: FilterDto, id: string) {
+    const { limit, offset, search } = filterDto;
+    console.log('findDispatchForUser', filterDto, id);
+
+    try {
+      let dispatches: any[] = [];
+      let count = 0;
+
+      if (search && search.trim() !== '') {
+        // Usar QueryBuilder para búsqueda flexible
+        const queryBuilder = this.productDispatchRepository
+          .createQueryBuilder('dispatch')
+          .leftJoinAndSelect('dispatch.vehicle_transfer', 'vehicle_transfer')
+          .leftJoinAndSelect('dispatch.type_packaging', 'type_packaging')
+          .leftJoinAndSelect('dispatch.user', 'user')
+          .where('dispatch.user_dispatch_id = :id', { id })
+          .andWhere('dispatch.is_active = :isActive', { isActive: true })
+          .andWhere(
+            "(LOWER(dispatch.batch_num) LIKE :search OR TO_CHAR(dispatch.created_at, 'YYYY-MM-DD') LIKE :search)",
+            { search: `%${search.toLowerCase()}%` },
+          )
+          .skip(offset)
+          .take(limit)
+          .select([
+            'dispatch.id',
+            'dispatch.batch_num',
+            'dispatch.date',
+            'dispatch.quantity',
+            'dispatch.responsible',
+            'dispatch.observations',
+            'dispatch.is_active',
+            'dispatch.user_dispatch_id',
+            'dispatch.created_at',
+            'dispatch.updated_at',
+            'vehicle_transfer.id',
+            'vehicle_transfer.vehicle',
+            'vehicle_transfer.num_domain',
+            'type_packaging.id',
+            'type_packaging.packaging',
+            'user.id',
+            'user.name',
+            'user.surname',
+          ]);
+
+        [dispatches, count] = await queryBuilder.getManyAndCount();
+      } else {
+        [dispatches, count] = await this.productDispatchRepository.findAndCount(
+          {
+            where: {
+              user_dispatch_id: id,
+              is_active: true,
+            },
+            skip: offset,
+            take: limit,
+            relations: {
+              vehicle_transfer: true,
+              type_packaging: true,
+              user: true,
+            },
+            select: {
+              id: true,
+              batch_num: true,
+              date: true,
+              quantity: true,
+              responsible: true,
+              observations: true,
+              is_active: true,
+              user_dispatch_id: true,
+              vehicle_transfer: {
+                id: true,
+                vehicle: true,
+                num_domain: true,
+              },
+              type_packaging: {
+                id: true,
+                packaging: true,
+              },
+              user: {
+                id: true,
+                name: true,
+                surname: true,
+              },
+              created_at: true,
+              updated_at: true,
+            },
+          },
+        );
+      }
+
+      const totalPages: number = Math.ceil(count / limit);
+      const currentPage: number = Math.floor(offset / limit + 1);
+      const hasNextPage: boolean = currentPage < totalPages;
+
+      return {
+        totalPages,
+        currentPage,
+        hasNextPage,
+        dispatches,
+      };
+    } catch (error) {
       console.log(error);
       throw new InternalServerErrorException('Check log server');
     }

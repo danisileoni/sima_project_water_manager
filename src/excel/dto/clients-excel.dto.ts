@@ -1,4 +1,4 @@
-import { IsString } from 'class-validator';
+import { IsNumber, IsString } from 'class-validator';
 
 export class ClientExcelDto {
   @IsString()
@@ -19,6 +19,6 @@ export class ClientExcelDto {
   @IsString()
   observations: string;
 
-  @IsString()
+  @IsNumber()
   quantity: number;
 }
