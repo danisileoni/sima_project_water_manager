@@ -4,7 +4,10 @@
 /build
 /postgres
 
+# Secret files
 client_secret.json
+google-service.json
+src/config/google-service.json
 
 # Logs
 logs

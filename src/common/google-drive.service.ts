@@ -9,8 +9,26 @@ export class GoogleDriveService implements OnModuleInit {
 
   async onModuleInit() {
     try {
+      let keyFilePath;
+
+      // Try Render secret files location first
+      const renderSecretPath = '/etc/secrets/google-service.json';
+      const localPath = path.join(__dirname, '../config/google-service.json');
+
+      if (fs.existsSync(renderSecretPath)) {
+        keyFilePath = renderSecretPath;
+        console.log('[GoogleDrive] Using Render secret file');
+      } else if (fs.existsSync(localPath)) {
+        keyFilePath = localPath;
+        console.log('[GoogleDrive] Using local config file');
+      } else {
+        throw new Error(
+          'Google service account file not found in /etc/secrets/ or local config',
+        );
+      }
+
       const auth = new google.auth.GoogleAuth({
-        keyFile: path.join(__dirname, '../config/google-service.json'),
+        keyFile: keyFilePath,
         scopes: ['https://www.googleapis.com/auth/drive'],
       });
 
