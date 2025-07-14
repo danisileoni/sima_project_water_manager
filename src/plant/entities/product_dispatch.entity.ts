@@ -79,14 +79,10 @@ export class ProductDispatch {
   @JoinColumn({ name: 'vehicle_transfer_id' })
   vehicle_transfer: VehicleTransfer;
 
-  @ManyToOne(() => User, (user) => user.product_dispatch)
-  @JoinColumn({ name: 'user_id' })
-  user: User;
-
   @Column({ name: 'user_dispatch_id', nullable: true })
   user_dispatch_id: string;
 
-  @ManyToOne(() => User, (user) => user.control_product)
+  @ManyToOne(() => User, (user) => user.product_dispatch)
   @JoinColumn({ name: 'user_dispatch_id' })
   user_dispatch: User;
 }

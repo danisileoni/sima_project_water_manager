@@ -29,8 +29,9 @@ export class DeliveryController {
   }
 
   @Get()
-  findAll(@Query() filterDto: FilterDto) {
-    return this.deliveryService.findAll(filterDto);
+  @Auth(ValidRoles.delivery, ValidRoles.admin)
+  findAll(@Query() filterDto: FilterDto, @GetUser() user: User) {
+    return this.deliveryService.findAll(filterDto, user);
   }
 
   @Get('client')

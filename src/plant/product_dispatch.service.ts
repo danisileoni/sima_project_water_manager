@@ -107,7 +107,6 @@ export class ProductDispatchService {
         date: validDate.date,
         vehicle_transfer: newVehicleTransfer,
         type_packaging: typePackaging,
-        user,
         user_dispatch: userDispatch,
         user_dispatch_id: user_dispatch_id,
       });
@@ -322,7 +321,7 @@ export class ProductDispatchService {
           .createQueryBuilder('dispatch')
           .leftJoinAndSelect('dispatch.vehicle_transfer', 'vehicle_transfer')
           .leftJoinAndSelect('dispatch.type_packaging', 'type_packaging')
-          .leftJoinAndSelect('dispatch.user', 'user')
+          .leftJoinAndSelect('dispatch.user_dispatch', 'user_dispatch')
           .where('dispatch.user_dispatch_id = :id', { id })
           .andWhere('dispatch.is_active = :isActive', { isActive: true })
           .andWhere(
@@ -347,9 +346,9 @@ export class ProductDispatchService {
             'vehicle_transfer.num_domain',
             'type_packaging.id',
             'type_packaging.packaging',
-            'user.id',
-            'user.name',
-            'user.surname',
+            'user_dispatch.id',
+            'user_dispatch.name',
+            'user_dispatch.surname',
           ]);
 
         [dispatches, count] = await queryBuilder.getManyAndCount();
@@ -365,7 +364,7 @@ export class ProductDispatchService {
             relations: {
               vehicle_transfer: true,
               type_packaging: true,
-              user: true,
+              user_dispatch: true,
             },
             select: {
               id: true,
@@ -385,7 +384,7 @@ export class ProductDispatchService {
                 id: true,
                 packaging: true,
               },
-              user: {
+              user_dispatch: {
                 id: true,
                 name: true,
                 surname: true,

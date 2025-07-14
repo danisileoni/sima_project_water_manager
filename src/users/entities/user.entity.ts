@@ -71,7 +71,10 @@ export class User {
   })
   hash_refresh_token: string;
 
-  @OneToMany(() => ProductDispatch, (productDispatch) => productDispatch.user)
+  @OneToMany(
+    () => ProductDispatch,
+    (productDispatch) => productDispatch.user_dispatch,
+  )
   product_dispatch: ProductDispatch[];
 
   @OneToMany(() => ControlProduct, (controlProduct) => controlProduct.user)

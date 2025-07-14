@@ -340,7 +340,7 @@ export class DeliveryService {
     }
   }
 
-  async findAll(filterDto: FilterDto) {
+  async findAll(filterDto: FilterDto, user: User) {
     try {
       const { limit, offset, search } = filterDto;
 
@@ -356,13 +356,12 @@ export class DeliveryService {
           .leftJoinAndSelect('client.address', 'address')
           .leftJoinAndSelect('address.province', 'province')
           .leftJoinAndSelect('address.city', 'city')
-          .where('client.name_or_company ILIKE :search', {
-            search: `%${search}%`,
-          })
-          .orWhere('client.dni_cuit ILIKE :search', { search: `%${search}%` })
-          .orWhere('client_products.batch_of_product ILIKE :search', {
-            search: `%${search}%`,
-          })
+          .leftJoin('client.user', 'user')
+          .where('user.id = :userId', { userId: user.id })
+          .andWhere(
+            '(client.name_or_company ILIKE :search OR client.dni_cuit ILIKE :search OR client_products.batch_of_product ILIKE :search)',
+            { search: `%${search}%` },
+          )
           .orderBy('client.id', 'DESC') // Ordenar por ID en orden descendente
           .take(limit)
           .skip(offset);
@@ -374,13 +373,12 @@ export class DeliveryService {
         countClients = await this.clientRepository
           .createQueryBuilder('client')
           .leftJoin('client.client_products', 'client_products')
-          .where('client.name_or_company ILIKE :search', {
-            search: `%${search}%`,
-          })
-          .orWhere('client.dni_cuit ILIKE :search', { search: `%${search}%` })
-          .orWhere('client_products.batch_of_product ILIKE :search', {
-            search: `%${search}%`,
-          })
+          .leftJoin('client.user', 'user')
+          .where('user.id = :userId', { userId: user.id })
+          .andWhere(
+            '(client.name_or_company ILIKE :search OR client.dni_cuit ILIKE :search OR client_products.batch_of_product ILIKE :search)',
+            { search: `%${search}%` },
+          )
           .getCount();
       } else {
         clients = await this.clientRepository.find({
@@ -393,11 +391,14 @@ export class DeliveryService {
             'address.province',
             'address.city',
           ],
+          where: { user: { id: user.id } },
           order: { id: 'DESC' }, // Ordenar por ID en orden descendente
         });
 
         countClients = await this.clientRepository
-          .createQueryBuilder()
+          .createQueryBuilder('client')
+          .leftJoin('client.user', 'user')
+          .where('user.id = :userId', { userId: user.id })
           .getCount();
       }
 
