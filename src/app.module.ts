@@ -9,6 +9,7 @@ import { PlantModule } from './plant/plant.module';
 import { DeliveryModule } from './delivery/delivery.module';
 import { ExcelModule } from './excel/excel.module';
 import { PerformanceModule } from './performance/performance.module';
+import { AddressModule } from './address/address.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PerformanceModule } from './performance/performance.module';
     DeliveryModule,
     ExcelModule,
     PerformanceModule,
+    AddressModule,
   ],
   controllers: [],
   providers: [],

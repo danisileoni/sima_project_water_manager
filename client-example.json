@@ -1,0 +1,23 @@
+{
+  "name_or_company": "Empresa ABC S.A.",
+  "contact": "Juan Pérez",
+  "observations": "Cliente preferencial, entregar en horario de oficina",
+  "dni_cuit": "30-71234567-9",
+  "products": [
+    {
+      "quantity": 10,
+      "product_id": 1,
+      "batch_of_product": "ABC12345"
+    },
+    {
+      "quantity": 5,
+      "product_id": 2,
+      "batch_of_product": "DEF67890"
+    }
+  ],
+  "address": {
+    "street": "Av. Corrientes 1234, Piso 5, Oficina B",
+    "provinceId": 1,
+    "cityId": 1
+  }
+}

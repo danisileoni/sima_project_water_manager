@@ -1,6 +1,8 @@
 import {
   IsArray,
   IsNumber,
+  IsObject,
+  IsOptional,
   IsPositive,
   IsString,
   MaxLength,
@@ -8,6 +10,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CreateAddressDto } from '../../address/dto/create-address.dto';
 
 export class ProductDto {
   @IsNumber()
@@ -43,4 +46,10 @@ export class CreateClientDto {
   @ValidateNested({ each: true })
   @Type(() => ProductDto)
   products: ProductDto[];
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CreateAddressDto)
+  address?: CreateAddressDto;
 }

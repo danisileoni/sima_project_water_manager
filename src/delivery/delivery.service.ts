@@ -17,6 +17,10 @@ import { TemplatesExcel } from '../excel/types/templates_excel';
 import * as path from 'path';
 import { ClientProduct } from './entities/client_product.entity';
 import { TypePackaging } from 'src/plant/entities/type_packaging.entity';
+import { Address } from 'src/address/entities/address.entity';
+import { Province } from 'src/address/entities/province.entity';
+import { City } from 'src/address/entities/city.entity';
+import { AddressService } from 'src/address/address.service';
 
 @Injectable()
 export class DeliveryService {
@@ -31,6 +35,13 @@ export class DeliveryService {
     private readonly clientProductRepository: Repository<ClientProduct>,
     @InjectRepository(TypePackaging)
     private readonly typePackagingRepository: Repository<TypePackaging>,
+    @InjectRepository(Address)
+    private readonly addressRepository: Repository<Address>,
+    @InjectRepository(Province)
+    private readonly provinceRepository: Repository<Province>,
+    @InjectRepository(City)
+    private readonly cityRepository: Repository<City>,
+    private readonly addressService: AddressService,
     private readonly excelService: ExcelService,
     private readonly googleDriveService: GoogleDriveService,
     private readonly dataSource: DataSource,
@@ -66,6 +77,20 @@ export class DeliveryService {
           : 0,
         user: userFind,
       });
+
+      // Create and associate address
+      // If address is not provided in the request, create a default address with the client's name as the street
+      if (!createClientDto.address) {
+        createClientDto.address = {
+          street: `Dirección de ${createClientDto.name_or_company}`,
+          provinceId: null,
+          cityId: null,
+        };
+      }
+
+      // Use the address service to create the address with proper province and city relationships
+      const address = await this.addressService.create(createClientDto.address);
+      client.address = address;
 
       // Save the client
       await this.clientRepository.save(client);
@@ -287,6 +312,9 @@ export class DeliveryService {
           'client_products',
           'client_products.type_packaging',
           'user',
+          'address',
+          'address.province',
+          'address.city',
         ],
       });
 
@@ -325,6 +353,9 @@ export class DeliveryService {
           .createQueryBuilder('client')
           .leftJoinAndSelect('client.client_products', 'client_products')
           .leftJoinAndSelect('client_products.type_packaging', 'type_packaging')
+          .leftJoinAndSelect('client.address', 'address')
+          .leftJoinAndSelect('address.province', 'province')
+          .leftJoinAndSelect('address.city', 'city')
           .where('client.name_or_company ILIKE :search', {
             search: `%${search}%`,
           })
@@ -355,7 +386,13 @@ export class DeliveryService {
         clients = await this.clientRepository.find({
           take: limit,
           skip: offset,
-          relations: ['client_products', 'client_products.type_packaging'],
+          relations: [
+            'client_products',
+            'client_products.type_packaging',
+            'address',
+            'address.province',
+            'address.city',
+          ],
           order: { id: 'DESC' }, // Ordenar por ID en orden descendente
         });
 
@@ -393,6 +430,9 @@ export class DeliveryService {
           .createQueryBuilder('client')
           .leftJoinAndSelect('client.client_products', 'client_products')
           .leftJoinAndSelect('client_products.type_packaging', 'type_packaging')
+          .leftJoinAndSelect('client.address', 'address')
+          .leftJoinAndSelect('address.province', 'province')
+          .leftJoinAndSelect('address.city', 'city')
           .leftJoin('client.user', 'user')
           .where('user.id = :userId', { userId: user.id })
           .andWhere(
@@ -421,7 +461,13 @@ export class DeliveryService {
         clients = await this.clientRepository.find({
           take: limit,
           skip: offset,
-          relations: ['client_products', 'client_products.type_packaging'],
+          relations: [
+            'client_products',
+            'client_products.type_packaging',
+            'address',
+            'address.province',
+            'address.city',
+          ],
           where: { user: { id: user.id } },
           order: { id: 'DESC' }, // Ordenar por ID en orden descendente
         });
@@ -458,7 +504,13 @@ export class DeliveryService {
 
       const client = await this.clientRepository.findOne({
         where: { id },
-        relations: ['client_products', 'client_products.type_packaging'],
+        relations: [
+          'client_products',
+          'client_products.type_packaging',
+          'address',
+          'address.province',
+          'address.city',
+        ],
       });
 
       if (!client) {
@@ -472,6 +524,18 @@ export class DeliveryService {
       }
 
       console.log(error);
+      throw new InternalServerErrorException('Check log server');
+    }
+  }
+
+  async remove(id: number): Promise<void> {
+    try {
+      const client = await this.findOne(id);
+      await this.clientRepository.softRemove(client);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Check log server');
     }
   }
@@ -521,17 +585,12 @@ export class DeliveryService {
       // Construir la consulta usando QueryBuilder
       const queryBuilder = this.clientRepository
         .createQueryBuilder('client')
-        .select([
-          'client.id',
-          'client.name_or_company',
-          'client.dni_cuit',
-          'client.contact',
-          'client.observations',
-          'client.created_at',
-        ]);
+        .leftJoinAndSelect('client.address', 'address')
+        .leftJoinAndSelect('address.province', 'province')
+        .leftJoinAndSelect('address.city', 'city');
 
       // FILTRO OBLIGATORIO por usuario
-      queryBuilder.andWhere('client.userId = :userId', { userId }); // Filtro por user_id
+      queryBuilder.where('client.userId = :userId', { userId }); // Filtro por user_id
 
       // Aplicar filtro de búsqueda general
       if (search) {
@@ -541,7 +600,8 @@ export class DeliveryService {
         );
       }
 
-      // Usar DISTINCT ON para evitar duplicados
+      // Usar la sintaxis correcta de DISTINCT ON para PostgreSQL
+      // Nota: distinctOn debe recibir cada columna como un argumento separado
       queryBuilder
         .distinctOn([
           'client.name_or_company',

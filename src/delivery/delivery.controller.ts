@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Delete,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { DeliveryService } from './delivery.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { Auth } from 'src/auth/decorators/auth.decorator';
@@ -53,5 +63,12 @@ export class DeliveryController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.deliveryService.findOne(+id);
+  }
+
+  @Delete(':id')
+  @Auth(ValidRoles.admin)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Param('id') id: string) {
+    return this.deliveryService.remove(+id);
   }
 }

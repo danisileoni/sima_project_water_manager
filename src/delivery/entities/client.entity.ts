@@ -1,6 +1,16 @@
 import { User } from '../../users/entities/user.entity';
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  DeleteDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { ClientProduct } from './client_product.entity';
+import { Address } from '../../address/entities/address.entity';
 
 @Entity()
 export class Client {
@@ -22,7 +32,7 @@ export class Client {
     transformer: {
       to: (value: number) => value,
       from: (value: string) => Number(value),
-    }
+    },
   })
   quantity: number;
 
@@ -46,10 +56,17 @@ export class Client {
     onUpdate: 'CURRENT_TIMESTAMP',
   })
   updated_at: Date;
-  
+
   @ManyToOne(() => User, (user) => user.client)
   user: User;
 
   @OneToMany(() => ClientProduct, (clientProduct) => clientProduct.client)
   client_products: ClientProduct[];
+
+  @OneToOne(() => Address, { eager: true, nullable: true, cascade: true })
+  @JoinColumn()
+  address: Address;
+
+  @DeleteDateColumn()
+  deletedAt: Date;
 }
