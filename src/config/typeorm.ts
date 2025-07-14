@@ -6,7 +6,7 @@ const dirname = __dirname;
 
 const config = {
   type: 'postgres',
-  ssl: false,
+  ssl: true,
   host: process.env.DB_POSTGRES_HOST,
   port: Number(process.env.DB_POSTGRES_PORT),
   username: process.env.DB_POSTGRES_USER,
